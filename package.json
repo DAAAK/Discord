@@ -16,9 +16,12 @@
     "@discordjs/opus": "^0.5.3",
     "@discordjs/rest": "^0.3.0",
     "@discordjs/voice": "^0.8.0",
+    "canvas": "^2.10.2",
     "discord-player": "^5.2.2",
     "discord.js": "^13.6.0",
     "dotenv": "^16.0.0",
-    "ffmpeg-static": "^5.1.0"
+    "ffmpeg-static": "^5.1.0",
+    "file-saver": "^2.0.5",
+    "ytdl-core": "^4.11.2"
   }
 }

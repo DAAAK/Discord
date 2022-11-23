@@ -31,7 +31,7 @@ module.exports = {
     .addSubcommand((subcommand) =>
       subcommand
         .setName("search")
-        .setDescription("Searches for sogn based on provided keywords")
+        .setDescription("Searches for song based on provided keywords")
         .addStringOption((option) =>
           option
             .setName("searchterms")
