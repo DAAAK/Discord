@@ -19,21 +19,16 @@ intents.presences = True
 class DiscordBot(commands.Bot):
 
     def __init__(self):
-        super().__init__(
-            command_prefix="!",
-            intents=intents
-        )
+        super().__init__(command_prefix="!", intents=intents)
 
         self.database = Database(config.DATABASE_URL)
         self.xp_service = XPService(
             database=self.database,
             guild_id=config.GUILD_ID,
-            level_channel_id=config.LEVEL_CHANNEL_ID
+            level_channel_id=config.LEVEL_CHANNEL_ID,
         )
 
-        self.message_events = MessageEvents(
-            self.xp_service
-        )
+        self.message_events = MessageEvents(self.xp_service)
 
     async def setup_hook(self):
         print("Initialisation du bot...")
@@ -58,54 +53,30 @@ class DiscordBot(commands.Bot):
         print(f"🟣 Streamers: {len(streamers)}")
         print("==============================")
 
-        await self.load_extension(
-            "cogs.xp"
-        )
+        await self.load_extension("cogs.xp")
 
         # Slash commands sur le serveur de développement
-        guild = discord.Object(
-            id=config.GUILD_ID
-        )
+        guild = discord.Object(id=config.GUILD_ID)
 
-        self.tree.copy_global_to(
-            guild=guild
-        )
+        self.tree.copy_global_to(guild=guild)
 
-        synced = await self.tree.sync(
-            guild=guild
-        )
+        synced = await self.tree.sync(guild=guild)
 
-        print(
-            f"✅ {len(synced)} slash command(s) synchronisée(s)."
-        )
+        print(f"✅ {len(synced)} slash command(s) synchronisée(s).")
 
-    async def on_message(
-        self,
-        message: discord.Message
-    ) -> None:
-        await self.message_events.on_message(
-            message
-        )
+    async def on_message(self, message: discord.Message) -> None:
+        await self.message_events.on_message(message)
 
         await self.process_commands(message)
 
-
     async def initialize_guild_users(self) -> None:
-        guild = self.get_guild(
-            config.GUILD_ID
-        )
+        guild = self.get_guild(config.GUILD_ID)
 
         if guild is None:
-            print(
-                f"⚠️ Serveur {config.GUILD_ID} "
-                "introuvable."
-            )
+            print(f"⚠️ Serveur {config.GUILD_ID} " "introuvable.")
             return
 
-        print(
-            f"👥 Initialisation des membres "
-            f"de {guild.name}..."
-        )
+        print(f"👥 Initialisation des membres " f"de {guild.name}...")
 
         count = 0
 
@@ -114,39 +85,22 @@ class DiscordBot(commands.Bot):
             if member.bot:
                 continue
 
-            await self.database.add_xp(
-                member.id,
-                member.display_name,
-                0
-            )
+            await self.database.add_xp(member.id, member.display_name, 0)
 
             count += 1
 
-        print(
-            f"✅ {count} membres vérifiés "
-            f"dans UserXP."
-        )
+        print(f"✅ {count} membres vérifiés " f"dans UserXP.")
 
-    async def on_member_join(
-        self,
-        member: discord.Member
-    ):
+    async def on_member_join(self, member: discord.Member):
         if member.bot:
             return
 
         if member.guild.id != config.GUILD_ID:
             return
 
-        await self.database.add_xp(
-            member.id,
-            member.display_name,
-            0
-        )
+        await self.database.add_xp(member.id, member.display_name, 0)
 
-        print(
-            f"👤 {member.display_name} "
-            "ajouté à UserXP."
-        )
+        print(f"👤 {member.display_name} " "ajouté à UserXP.")
 
     async def close(self):
         await self.database.disconnect()
@@ -179,6 +133,7 @@ class DiscordBot(commands.Bot):
                 print(f"Web      : {member.web_status}")
                 print(f"Activity : {member.activity}")
                 print("==========================")
+
 
 bot = DiscordBot()
 

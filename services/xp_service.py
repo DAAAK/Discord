@@ -9,22 +9,14 @@ class XPService:
     XP_PER_MESSAGE = 5
     COOLDOWN = timedelta(minutes=2)
 
-    def __init__(
-        self,
-        database: Database,
-        guild_id: int,
-        level_channel_id: int
-    ):
+    def __init__(self, database: Database, guild_id: int, level_channel_id: int):
         self.database = database
         self.guild_id = guild_id
         self.level_channel_id = level_channel_id
 
         self.cooldowns: dict[int, datetime] = {}
 
-    async def process_message(
-        self,
-        message: discord.Message
-    ) -> None:
+    async def process_message(self, message: discord.Message) -> None:
 
         # Exactement comme le C# : pas d'XP aux bots
         if message.author.bot:
@@ -58,12 +50,8 @@ class XPService:
             else message.author.name
         )
 
-        leveled_up, new_level, new_xp = (
-            await self.database.add_xp(
-                user_id,
-                display_name,
-                self.XP_PER_MESSAGE
-            )
+        leveled_up, new_level, new_xp = await self.database.add_xp(
+            user_id, display_name, self.XP_PER_MESSAGE
         )
 
         print(
@@ -72,56 +60,29 @@ class XPService:
         )
 
         if leveled_up:
-            await self.send_level_up(
-                message.author,
-                new_level,
-                new_xp
-            )
+            await self.send_level_up(message.author, new_level, new_xp)
 
-    async def send_level_up(
-        self,
-        user: discord.abc.User,
-        level: int,
-        xp: int
-    ) -> None:
+    async def send_level_up(self, user: discord.abc.User, level: int, xp: int) -> None:
 
-        guild = user.guild if isinstance(
-            user,
-            discord.Member
-        ) else None
+        guild = user.guild if isinstance(user, discord.Member) else None
 
         if guild is None:
             return
 
-        channel = guild.get_channel(
-            self.level_channel_id
-        )
+        channel = guild.get_channel(self.level_channel_id)
 
-        if not isinstance(
-            channel,
-            discord.TextChannel
-        ):
-            print(
-                "⚠️ Level channel introuvable : "
-                f"{self.level_channel_id}"
-            )
+        if not isinstance(channel, discord.TextChannel):
+            print("⚠️ Level channel introuvable : " f"{self.level_channel_id}")
             return
 
         embed = discord.Embed(
             title="🎉 Level Up!",
-            description=(
-                f"{user.mention} has reached "
-                f"**Level {level}**!"
-            ),
-            color=discord.Color.gold()
+            description=(f"{user.mention} has reached " f"**Level {level}**!"),
+            color=discord.Color.gold(),
         )
 
-        embed.set_thumbnail(
-            url=user.display_avatar.url
-        )
+        embed.set_thumbnail(url=user.display_avatar.url)
 
-        embed.set_footer(
-            text=f"XP: {xp}"
-        )
+        embed.set_footer(text=f"XP: {xp}")
 
         await channel.send(embed=embed)
