@@ -54,6 +54,8 @@ class DiscordBot(commands.Bot):
         print("==============================")
 
         await self.load_extension("cogs.xp")
+        await self.load_extension("cogs.gifs")
+        await self.load_extension("cogs.webtoons")
 
         # Slash commands sur le serveur de développement
         guild = discord.Object(id=config.GUILD_ID)
