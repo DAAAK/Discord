@@ -33,13 +33,17 @@ LEVEL_CHANNEL_ID = get_required_int("LEVEL_CHANNEL_ID")
 GAMES_CHANNEL_ID = get_required_int("GAMES_CHANNEL_ID")
 POLL_CHANNEL_ID = get_required_int("POLL_CHANNEL_ID")
 COMMANDS_CHANNEL_ID = get_required_int("COMMANDS_CHANNEL_ID")
+COMMANDS_MESSAGE_ID = get_required_int("COMMANDS_MESSAGE_ID")
 WEBTOON_CHANNEL_ID = get_required_int("WEBTOON_CHANNEL_ID")
 WEBTOON_MESSAGE_ID = get_required_int("WEBTOON_MESSAGE_ID")
+MUSIC_CHANNEL_ID = get_required_int("MUSIC_CHANNEL_ID")
 
 TWITCH_NOTIFICATIONS_CHANNEL_ID = get_required_int("TWITCH_NOTIFICATIONS_CHANNEL_ID")
 
 TWITCH_CLIENT_ID = get_required_env("TWITCH_CLIENT_ID")
 TWITCH_CLIENT_SECRET = get_required_env("TWITCH_CLIENT_SECRET")
+
+FFMPEG_PATH = get_required_env("FFMPEG_PATH")
 
 
 def get_role_ids() -> list[int]:

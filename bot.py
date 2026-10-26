@@ -4,8 +4,10 @@ from discord.ext import commands
 import config
 from database.database import Database
 
-from services.xp_service import XPService
 from events.messages import MessageEvents
+
+from services.xp_service import XPService
+from services.twitch_service import TwitchService
 
 intents = discord.Intents.default()
 
@@ -26,6 +28,11 @@ class DiscordBot(commands.Bot):
             database=self.database,
             guild_id=config.GUILD_ID,
             level_channel_id=config.LEVEL_CHANNEL_ID,
+        )
+
+        self.twitch_service = TwitchService(
+            client_id=config.TWITCH_CLIENT_ID,
+            client_secret=config.TWITCH_CLIENT_SECRET,
         )
 
         self.message_events = MessageEvents(self.xp_service)
@@ -56,6 +63,13 @@ class DiscordBot(commands.Bot):
         await self.load_extension("cogs.xp")
         await self.load_extension("cogs.gifs")
         await self.load_extension("cogs.webtoons")
+        await self.load_extension("cogs.general")
+        await self.load_extension("cogs.roles")
+        await self.load_extension("cogs.polls")
+        await self.load_extension("cogs.moderation")
+        await self.load_extension("cogs.games")
+        await self.load_extension("cogs.twitch")
+        await self.load_extension("cogs.music")
 
         # Slash commands sur le serveur de développement
         guild = discord.Object(id=config.GUILD_ID)

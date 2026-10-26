@@ -4,10 +4,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
-
 from database.database import Database
 from services.image_service import ImageService
+
+from utils.checks import has_required_role
 
 
 class XPCog(commands.Cog):
@@ -94,7 +94,7 @@ class XPCog(commands.Cog):
     @app_commands.describe(
         user="Utilisateur auquel ajouter de l'XP", amount="Quantité d'XP à ajouter"
     )
-    @app_commands.checks.has_permissions(administrator=True)
+    @has_required_role()
     async def add_xp(
         self,
         interaction: discord.Interaction,
@@ -137,7 +137,7 @@ class XPCog(commands.Cog):
     @app_commands.describe(
         user="Utilisateur à modifier", xp="Nouvelle quantité totale d'XP"
     )
-    @app_commands.checks.has_permissions(administrator=True)
+    @has_required_role()
     async def update_xp(
         self,
         interaction: discord.Interaction,
