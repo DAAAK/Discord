@@ -1,4 +1,6 @@
 import asyncio
+import random
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -71,6 +73,9 @@ class GuildMusicState:
         # Salon texte dans lequel le player est affiché
         self.text_channel_id: Optional[int] = None
 
+        self.playlist_mode: bool = False
+        self.shuffle_enabled: bool = False
+
 
 class MusicPlayerView(discord.ui.View):
 
@@ -83,6 +88,69 @@ class MusicPlayerView(discord.ui.View):
 
         self.cog = cog
         self.guild_id = guild_id
+
+        # Récupère l'état AVANT de l'utiliser
+        state = self.cog.get_state(guild_id)
+
+        # Le bouton Random apparaît uniquement
+        # lorsqu'une playlist est en cours
+        if not state.playlist_mode:
+            self.remove_item(self.shuffle)
+
+        elif state.shuffle_enabled:
+            self.shuffle.style = discord.ButtonStyle.success
+            self.shuffle.label = "Random ON"
+
+        else:
+            self.shuffle.style = discord.ButtonStyle.secondary
+            self.shuffle.label = "Random"
+
+    async def interaction_check(
+        self,
+        interaction: discord.Interaction,
+    ) -> bool:
+
+        guild = interaction.guild
+
+        if guild is None:
+            return False
+
+        # User must be a member of the server
+        if not isinstance(interaction.user, discord.Member):
+            return False
+
+        voice_client = guild.voice_client
+
+        # Bot is not connected to voice
+        if voice_client is None or voice_client.channel is None:
+
+            await interaction.response.send_message(
+                "❌ Le bot n'est connecté à aucun salon vocal.",
+                ephemeral=True,
+            )
+            return False
+
+        # User is not in a voice channel
+        if interaction.user.voice is None or interaction.user.voice.channel is None:
+
+            await interaction.response.send_message(
+                "❌ Tu dois être dans le salon vocal du bot "
+                "pour utiliser le player.",
+                ephemeral=True,
+            )
+            return False
+
+        # User is in another voice channel
+        if interaction.user.voice.channel.id != voice_client.channel.id:
+
+            await interaction.response.send_message(
+                "❌ Tu dois être dans le même salon vocal "
+                "que le bot pour utiliser le player.",
+                ephemeral=True,
+            )
+            return False
+
+        return True
 
     # =====================================================
     # PAUSE / RESUME
@@ -208,6 +276,8 @@ class MusicPlayerView(discord.ui.View):
         # pour empêcher le lancement du suivant.
         state.queue.clear()
         state.current = None
+        state.playlist_mode = False
+        state.shuffle_enabled = False
 
         voice_client = guild.voice_client
 
@@ -301,6 +371,8 @@ class MusicPlayerView(discord.ui.View):
         # Vide complètement le lecteur
         state.queue.clear()
         state.current = None
+        state.playlist_mode = False
+        state.shuffle_enabled = False
 
         voice_client = guild.voice_client
 
@@ -324,6 +396,46 @@ class MusicPlayerView(discord.ui.View):
         # le prochain /play en crée un nouveau.
         state.player_message = None
         state.text_channel_id = None
+
+    @discord.ui.button(
+        label="Random",
+        emoji="🔀",
+        style=discord.ButtonStyle.secondary,
+        custom_id="music:shuffle",
+    )
+    async def shuffle(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ) -> None:
+
+        state = self.cog.get_state(self.guild_id)
+
+        if not state.playlist_mode:
+
+            await interaction.response.send_message(
+                "❌ Le mode aléatoire est disponible " "uniquement pour les playlists.",
+                ephemeral=True,
+            )
+            return
+
+        if len(state.queue) < 2:
+
+            await interaction.response.send_message(
+                "❌ Il n'y a pas assez de morceaux " "dans la file d'attente.",
+                ephemeral=True,
+            )
+            return
+
+        # Active / désactive
+        state.shuffle_enabled = not state.shuffle_enabled
+
+        if state.shuffle_enabled:
+            random.shuffle(state.queue)
+
+        await interaction.response.defer()
+
+        await self.cog.update_player_message(interaction.guild)
 
 
 # =========================================================
@@ -1039,6 +1151,8 @@ class MusicCog(commands.Cog):
         # On vide d'abord la queue pour empêcher
         # le lancement d'un autre morceau.
         state.queue.clear()
+        state.playlist_mode = False
+        state.shuffle_enabled = False
 
         voice_client = interaction.guild.voice_client
 
@@ -1174,6 +1288,8 @@ class MusicCog(commands.Cog):
 
         state.queue.clear()
         state.current = None
+        state.playlist_mode = False
+        state.shuffle_enabled = False
 
         voice_client = interaction.guild.voice_client
 

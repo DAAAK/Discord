@@ -523,3 +523,256 @@ class Database:
             result = await connection.execute(query, discord_id, new_twitch_name)
 
         return result != "UPDATE 0"
+
+    # =========================================================
+    # PLAYLISTS
+    # =========================================================
+
+    async def create_playlist(
+        self,
+        guild_id: int,
+        user_id: int,
+        name: str,
+    ) -> bool:
+
+        pool = self._get_pool()
+
+        query = """
+            INSERT INTO Playlists (
+                GuildId,
+                UserId,
+                Name
+            )
+            VALUES ($1, $2, $3)
+            ON CONFLICT (
+                GuildId,
+                UserId,
+                LOWER(Name)
+            )
+            DO NOTHING
+        """
+
+        async with pool.acquire() as connection:
+            result = await connection.execute(
+                query,
+                guild_id,
+                user_id,
+                name,
+            )
+
+        return result != "INSERT 0 0"
+
+    async def delete_playlist(
+        self,
+        guild_id: int,
+        user_id: int,
+        name: str,
+    ) -> bool:
+
+        pool = self._get_pool()
+
+        query = """
+            DELETE FROM Playlists
+            WHERE GuildId = $1
+            AND UserId = $2
+            AND LOWER(Name) = LOWER($3)
+        """
+
+        async with pool.acquire() as connection:
+            result = await connection.execute(
+                query,
+                guild_id,
+                user_id,
+                name,
+            )
+
+        return result != "DELETE 0"
+
+    async def rename_playlist(
+        self,
+        guild_id: int,
+        user_id: int,
+        name: str,
+        new_name: str,
+    ) -> bool:
+
+        pool = self._get_pool()
+
+        query = """
+            UPDATE Playlists
+            SET Name = $4
+            WHERE GuildId = $1
+            AND UserId = $2
+            AND LOWER(Name) = LOWER($3)
+        """
+
+        async with pool.acquire() as connection:
+            result = await connection.execute(
+                query,
+                guild_id,
+                user_id,
+                name,
+                new_name,
+            )
+
+        return result != "UPDATE 0"
+
+    async def get_user_playlists(
+        self,
+        guild_id: int,
+        user_id: int,
+    ):
+        pool = self._get_pool()
+
+        query = """
+            SELECT
+                p.Id,
+                p.Name,
+                COUNT(pt.Id) AS TrackCount
+            FROM Playlists p
+            LEFT JOIN PlaylistTracks pt
+                ON pt.PlaylistId = p.Id
+            WHERE p.GuildId = $1
+            AND p.UserId = $2
+            GROUP BY p.Id, p.Name
+            ORDER BY LOWER(p.Name)
+        """
+
+        async with pool.acquire() as connection:
+            return await connection.fetch(
+                query,
+                guild_id,
+                user_id,
+            )
+
+    async def get_playlist(
+        self,
+        guild_id: int,
+        user_id: int,
+        name: str,
+    ):
+        pool = self._get_pool()
+
+        query = """
+            SELECT Id, Name
+            FROM Playlists
+            WHERE GuildId = $1
+            AND UserId = $2
+            AND LOWER(Name) = LOWER($3)
+            LIMIT 1
+        """
+
+        async with pool.acquire() as connection:
+            return await connection.fetchrow(
+                query,
+                guild_id,
+                user_id,
+                name,
+            )
+
+    async def get_playlist_tracks(
+        self,
+        playlist_id: int,
+    ):
+        pool = self._get_pool()
+
+        query = """
+            SELECT
+                Id,
+                Title,
+                Url,
+                Uploader,
+                Duration,
+                Thumbnail,
+                Position
+            FROM PlaylistTracks
+            WHERE PlaylistId = $1
+            ORDER BY Position
+        """
+
+        async with pool.acquire() as connection:
+            return await connection.fetch(
+                query,
+                playlist_id,
+            )
+
+    async def add_playlist_track(
+        self,
+        playlist_id: int,
+        title: str,
+        url: str,
+        uploader: str,
+        duration: int | None,
+        thumbnail: str | None,
+    ) -> None:
+
+        pool = self._get_pool()
+
+        query = """
+            INSERT INTO PlaylistTracks (
+                PlaylistId,
+                Title,
+                Url,
+                Uploader,
+                Duration,
+                Thumbnail,
+                Position
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6,
+                (
+                    SELECT COALESCE(MAX(Position), 0) + 1
+                    FROM PlaylistTracks
+                    WHERE PlaylistId = $1
+                )
+            )
+        """
+
+        async with pool.acquire() as connection:
+            await connection.execute(
+                query,
+                playlist_id,
+                title,
+                url,
+                uploader,
+                duration,
+                thumbnail,
+            )
+
+    async def remove_playlist_track(
+        self,
+        playlist_id: int,
+        position: int,
+    ) -> bool:
+
+        pool = self._get_pool()
+
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+
+                deleted = await connection.fetchrow(
+                    """
+                    DELETE FROM PlaylistTracks
+                    WHERE PlaylistId = $1
+                    AND Position = $2
+                    RETURNING Id
+                    """,
+                    playlist_id,
+                    position,
+                )
+
+                if deleted is None:
+                    return False
+
+                await connection.execute(
+                    """
+                    UPDATE PlaylistTracks
+                    SET Position = Position - 1
+                    WHERE PlaylistId = $1
+                    AND Position > $2
+                    """,
+                    playlist_id,
+                    position,
+                )
+
+        return True

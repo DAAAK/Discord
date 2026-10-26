@@ -70,6 +70,7 @@ class DiscordBot(commands.Bot):
         await self.load_extension("cogs.games")
         await self.load_extension("cogs.twitch")
         await self.load_extension("cogs.music")
+        await self.load_extension("cogs.playlist")
 
         # Slash commands sur le serveur de développement
         guild = discord.Object(id=config.GUILD_ID)
